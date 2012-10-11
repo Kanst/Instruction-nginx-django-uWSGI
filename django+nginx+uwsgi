@@ -1,0 +1,68 @@
+	sudo apt-get install python-pip build-essential python-dev libxml2-dev
+	sudo apt-get install uwsgi
+	sudo apt-get install uwsgi-plugin-python
+	sudo apt-get install python-virtualenv
+
+
+Файлы нашего проекта {name} будут лежать в /home/django/project/{name}
+В папке /home/django/project/ будет содержаться каталог *static*. Через него nginx будет раздавать файлы.
+
+В settings.py проекта {name} имеем:
+	import os
+	STATIC_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '../static/{name}'))
+	STATIC_URL = '/static/' 
+
+
+## Настройка uWSGI
+Конфигурационный файл uWSGI для проекта {name} будет называться /etc/uwsgi/apps-available/{name}.ini и примет следующий вид:
+
+	[uwsgi]
+	    plugins = python27
+	    chdir = /home/web/proj/{name}/
+	    pythonpath = ..
+	    env = DJANGO_SETTINGS_MODULE={name}.settings
+	    module = django.core.handlers.wsgi:WSGIHandler()
+	    touch-reload = /home/web/proj/{name}/touchme 
+
+Также создаем символическую ссылку на него в /etc/uwsgi/apps-enabled:
+
+	cd /etc/uwsgi/apps-enabled
+	ln -s ../apps-available/{name}.ini .
+
+После чего запускаем демон uWSGI: **/etc/init.d/uwsgi start {name}**
+
+Конфигурационный файл Nginx назовем /etc/nginx/sites-available/{name}. Его минимальный вариант может быть таким:
+	server {
+	    listen	80;
+
+	    server_name	{name};
+
+	    access_log	/var/log/nginx/{name}.access.log;
+	    error_log	/var/log/nginx/{name}.error.log;
+
+	    location /static/ {
+		alias	/home/web/proj/static/{name}/;
+	    }
+            
+	    location /static/admin/ {
+        	alias	/usr/local/lib/python2.7/dist-packages/django/contrib/admin/static/admin/;
+		
+	    location / {
+		include	uwsgi_params;
+		uwsgi_pass	unix:///var/run/uwsgi/app/{name}/socket;
+	    }
+
+
+
+Точно так же создаем символическую ссылку в /etc/nginx/sites-enabled:
+
+	cd /etc/nginx/sites-enabled/
+	ln -s ../sites-available/{name} .
+
+	}
+
+И перезапускаем Nginx: **/etc/init.d/nginx restart**
+
+**/etc/init.d/uwsgi start|stop|restart site/{name}**
+
+

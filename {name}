@@ -1,0 +1,21 @@
+server {
+    listen	80;
+
+    server_name	dbkurs;
+
+    access_log	/var/log/nginx/dbkurs.access.log;
+    error_log	/var/log/nginx/dbkurs.error.log;
+
+    location /static/admin/ {
+        alias	/usr/local/lib/python2.7/dist-packages/django/contrib/admin/static/admin/;
+    }
+
+    location /static/ {
+        alias	/home/jeka/proj/static/dbkurs/;
+    }
+
+    location / {
+        include	uwsgi_params;
+        uwsgi_pass	unix:///var/run/uwsgi/app/dbkurs/socket;
+    }
+}
